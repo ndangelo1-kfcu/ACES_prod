@@ -1,0 +1,12 @@
+/old_csvs_delete/*
+/logs/*
+/EXPORT/*
+/ARCHIVE/*
+/venv/*
+/ACES_ETL/__pycache__/*
+/ACES_ETL/.vscode/*
+/ACES_ETL/logs/*
+/ACES_ETL/venv/*
+/ACES_ETL/ARCHIVE/*
+/ACES_ETL/EXPORT/*
+ACES_ETL/EXPORT/KFCU_PreFunding_20250319-1.csv
