@@ -857,7 +857,7 @@ FROM
 						and	PostCloserMgr.processdate = @latestProcessDate
 				) PostCloser 
 					on PostCloser.LNKEY = l.[Loan Number]
-	LEFT JOIN EmpowerODS.EMPOWER_WK.LN_MERSDATA mers
+	LEFT JOIN VSODSDB01.[EmpowerODS].[EMPOWER_WK].LN_MERSDATA mers
 				ON mers.LNKEY = l.[Loan Number]
 
 where [Underwriters Decision Code] <> 120		-- Suspended
