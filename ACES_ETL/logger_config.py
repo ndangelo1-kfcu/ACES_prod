@@ -11,7 +11,8 @@ def setup_logger():
 
     # Configure logging to log to both a file and the console
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)  # Set to DEBUG to capture all log messages
+    # CONSOLE:
+    logger.setLevel(logging.DEBUG)  # Set to DEBUG to capture all log messages
 
     # Create a timed rotating file handler
     file_handler = TimedRotatingFileHandler(
@@ -20,7 +21,8 @@ def setup_logger():
         interval=1,
         backupCount=30,
     )
-    file_handler.setLevel(logging.ERROR)  # Set to ERROR to log errors only
+    # FILE LOGGING
+    file_handler.setLevel(logging.INFO)  # Set to ERROR to log errors only
 
     # Create console handler
     console_handler = logging.StreamHandler()

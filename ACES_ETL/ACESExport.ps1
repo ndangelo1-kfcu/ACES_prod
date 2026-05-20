@@ -1,3 +1,8 @@
+param(
+    [string]$Date = $null,
+    [string]$Type = $null
+)
+
 # Set file location and name
 $fileLocation = "KFCU_SSIS\Live\ACES"
 $fileName = "ACES_ETL\ACESExport.py"
@@ -20,8 +25,17 @@ $maxRetries = 3
 $retryCount = 0
 $success = $false
 
+# Build argument list, appending --date and/or --type if provided
+$argList = $pythonScriptPath
+if ($Date) {
+    $argList = "$argList --date $Date"
+}
+if ($Type) {
+    $argList = "$argList --type $Type"
+}
+
 while ($retryCount -lt $maxRetries -and -not $success) {
-    $process = Start-Process -FilePath ("\\vsarcu02\c$\" + $fileLocation + "\venv\Scripts\python.exe") -ArgumentList $pythonScriptPath -NoNewWindow -PassThru -Wait
+    $process = Start-Process -FilePath ("\\vsarcu02\c$\" + $fileLocation + "\venv\Scripts\python.exe") -ArgumentList $argList -NoNewWindow -PassThru -Wait
     if ($process.ExitCode -eq 0) {
         Write-Output "Python script completed successfully"
         $success = $true

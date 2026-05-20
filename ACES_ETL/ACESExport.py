@@ -8,6 +8,7 @@ import shutil
 import time
 import zipfile
 import sys
+import argparse
 from constants import export_staging_folder, archive_folder, network_folder
 
 os.makedirs(export_staging_folder, exist_ok=True)
@@ -88,8 +89,8 @@ def save(parameter, export_folder, df):
 # Function to archive files and clean up old archives
 def archive_files(files, archive_folder):
     try:
-        today = datetime.now().strftime("%Y%m%d")
-        archive_name = os.path.join(archive_folder, f"archive_{today}.zip")
+        now = datetime.now().strftime("%Y%m%d_%H%M%S")
+        archive_name = os.path.join(archive_folder, f"archive_{now}.zip")
 
         # Add files to the zip archive
         print(f"Archiving files to {archive_name}")
@@ -182,42 +183,122 @@ def main():
     try:
         # standard = r"C:\kDev\ACES\ACES_ETL\SQL\KFCU_ACES_StandardFieldsV2.sql"
         # hmda = r"C:\kDev\ACES\ACES_ETL\SQL\KFCU_ACES_HMDA.sql"
-
         standard = r"C:\KFCU_SSIS\Live\ACES\ACES_ETL\SQL\KFCU_ACES_StandardFieldsV3.sql"
         # hmda = r"C:\kDev\ACES\ACES_ETL\SQL\KFCU_ACES_HMDA.sql"
         hmda = r"C:\KFCU_SSIS\Live\ACES\ACES_ETL\SQL\KFCU_ACES_HMDA.sql"
 
+        # Parse command-line arguments
+        parser = argparse.ArgumentParser(description="Run ACES ETL export process")
+        parser.add_argument(
+            "--date",
+            help="Simulate a specific date (YYYY-MM-DD) to rerun a missed scheduled day (e.g., 2026-05-15)",
+            default=None,
+        )
+        parser.add_argument(
+            "--type",
+            help="Explicitly run specific report(s), comma-separated: pre-funding, adverse, hmda, post-closing",
+            default=None,
+        )
+        args = parser.parse_args()
+
+        # Valid report types
+        VALID_TYPES = {"pre-funding", "adverse", "hmda", "post-closing"}
+
         # Define schedule
         today = date.today()
-        weekday = today.weekday()  # Monday=0, Tuesday=1, ..., Sunday=6
-        current_hour = datetime.now().hour
 
-        # Morning: run all
-        if current_hour < 12:
-            # Run STANDARD.sql with 'Pre-Funding' Monday-Friday
-            if weekday in range(0, 5):  # Monday to Friday
+        # Track first successful run of the day via a marker file
+        state_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+        os.makedirs(state_dir, exist_ok=True)
+        morning_flag = os.path.join(
+            state_dir, f"morning_run_{today.strftime('%Y%m%d')}.flag"
+        )
+        is_first_run = False  # set True only in schedule branches that qualify
+
+        if args.type:
+            # --type: bypass scheduling entirely, run exactly the specified reports
+            requested_types = [t.strip().lower() for t in args.type.split(",")]
+            invalid_types = [t for t in requested_types if t not in VALID_TYPES]
+            if invalid_types:
+                print(
+                    f"Error: Invalid type(s): {', '.join(invalid_types)}. "
+                    f"Valid values: {', '.join(sorted(VALID_TYPES))}"
+                )
+                logger.error(f"Invalid --type argument(s): {', '.join(invalid_types)}")
+                sys.exit(1)
+            print(f"Running explicit report type(s): {', '.join(requested_types)}")
+            logger.info(
+                f"Running explicit report type(s): {', '.join(requested_types)}"
+            )
+            if "pre-funding" in requested_types:
                 print("Running Pre-Funding")
                 logger.info("Running Pre-Funding")
                 run_query_and_save(standard, "Pre-Funding", export_staging_folder)
-
-            # Run STANDARD.sql with 'Adverse' and HMDA.sql on Tuesday
-            if weekday == 1:  # Tuesday
-                print("Running Adverse and HMDA")
-                logger.info("Running Adverse and HMDA")
+            if "adverse" in requested_types:
+                print("Running Adverse")
+                logger.info("Running Adverse")
                 run_query_and_save(standard, "Adverse", export_staging_folder)
+            if "hmda" in requested_types:
+                print("Running HMDA")
+                logger.info("Running HMDA")
                 run_query_and_save(hmda, "", export_staging_folder)
-
-            # Run STANDARD.sql with 'Post-Closing' on the 15th of the month
-            if today.day == 15:
+            if "post-closing" in requested_types:
                 print("Running Post-Closing")
                 logger.info("Running Post-Closing")
                 run_query_and_save(standard, "Post-Closing", export_staging_folder)
         else:
-            # Afternoon: run only Pre-Funding
-            if weekday in range(0, 5):  # Monday to Friday
-                print("Running Pre-Funding (Afternoon)")
-                logger.info("Running Pre-Funding (Afternoon)")
-                run_query_and_save(standard, "Pre-Funding", export_staging_folder)
+            # Determine the date context for schedule-based runs
+            if args.date:
+                try:
+                    sim_date = datetime.strptime(args.date, "%Y-%m-%d").date()
+                except ValueError:
+                    print(
+                        f"Error: Invalid date format '{args.date}'. Use YYYY-MM-DD (e.g., 2026-05-15)."
+                    )
+                    logger.error(f"Invalid --date argument: {args.date}")
+                    sys.exit(1)
+                weekday = sim_date.weekday()
+                sim_day = sim_date.day
+                is_first_run = True
+                print(
+                    f"Simulating date {args.date} ({sim_date.strftime('%A')}), forcing morning schedule."
+                )
+                logger.info(f"Simulating date {args.date}, forcing morning schedule.")
+            else:
+                weekday = today.weekday()  # Monday=0, Tuesday=1, ..., Sunday=6
+                sim_day = today.day
+                is_first_run = not os.path.exists(morning_flag)
+
+            # First run of the day: run full morning schedule
+            if is_first_run:
+                print("First run of the day - running full morning schedule.")
+                logger.info("First run of the day - running full morning schedule.")
+                # Run STANDARD.sql with 'Pre-Funding' Monday-Friday
+                if weekday in range(0, 5):  # Monday to Friday
+                    print("Running Pre-Funding")
+                    logger.info("Running Pre-Funding")
+                    run_query_and_save(standard, "Pre-Funding", export_staging_folder)
+
+                # Run STANDARD.sql with 'Adverse' and HMDA.sql on Tuesday
+                if weekday == 1:  # Tuesday
+                    print("Running Adverse and HMDA")
+                    logger.info("Running Adverse and HMDA")
+                    run_query_and_save(standard, "Adverse", export_staging_folder)
+                    run_query_and_save(hmda, "", export_staging_folder)
+
+                # Run STANDARD.sql with 'Post-Closing' on the 15th of the month
+                if sim_day == 15:
+                    print("Running Post-Closing")
+                    logger.info("Running Post-Closing")
+                    run_query_and_save(standard, "Post-Closing", export_staging_folder)
+            else:
+                # Subsequent run: run only Pre-Funding
+                print("Subsequent run - running Pre-Funding only.")
+                logger.info("Subsequent run - running Pre-Funding only.")
+                if weekday in range(0, 5):  # Monday to Friday
+                    print("Running Pre-Funding (Subsequent)")
+                    logger.info("Running Pre-Funding (Subsequent)")
+                    run_query_and_save(standard, "Pre-Funding", export_staging_folder)
 
         if not files:
             print(
@@ -248,6 +329,12 @@ def main():
         print("Archiving files...")
         logger.info("Archiving files...")
         archive_files(files, archive_folder)
+
+        # Mark first run as complete (only for normal runs, not --date/--type overrides)
+        if is_first_run and not args.date and not args.type:
+            open(morning_flag, "w").close()
+            print(f"First run marked as complete: {morning_flag}")
+            logger.info(f"First run marked as complete: {morning_flag}")
     except Exception as ex:
         logger.exception(f"Error in main execution: {ex}")
         sys.exit(1)

@@ -54,7 +54,7 @@ logs/
 
 - Python 3.x
 - Required Python packages (install via `requirements.txt`):
-  ```bash
+  ```powershell
   pip install -r requirements.txt
 
 
@@ -130,10 +130,27 @@ The script includes robust error handling and logging:
    - Place the required `.sql` files in the `SQL` folder.
 
 2. **Run the Script**:
-   - Execute the script using Python:
-     ```bash
-     python ACESExport.py
-     ```
+::   - **`-Date YYYY-MM-DD`**: Simulates the given date, running the full morning schedule as if it were that day (including weekday and day-of-month logic). Does not create/update the morning marker file.
+::   - **`-Type`**: Comma-separated list of reports to run regardless of date or weekday. Does not create/update the morning marker file.
+::   - Valid `-Type` values: `pre-funding`, `adverse`, `hmda`, `post-closing`.
+::
+::   - Run the script normally:
+::     ```powershell
+::     .\ACESExport.ps1
+::     ```
+::   - To rerun a missed day (simulates that date's full schedule, including the 15th check):
+::     ```powershell
+::     .\ACESExport.ps1 -Date 2026-05-15
+::     ```
+::   - To run specific report(s) explicitly, bypassing all scheduling logic:
+::     ```powershell
+::     .\ACESExport.ps1 -Type post-closing
+::     .\ACESExport.ps1 -Type pre-funding,adverse,hmda
+::     ```
+::   - Both flags can be combined:
+::     ```powershell
+::     .\ACESExport.ps1 -Date 2026-05-19 -Type adverse,hmda
+::     ```
 
 3. **Monitor Logs**:
    - Check the `logs` folder for detailed logs of the script's execution.
@@ -142,10 +159,26 @@ The script includes robust error handling and logging:
 
 ## Scheduling
 
-The script is designed to run specific queries based on the day of the week and the date:
-- **Monday to Friday**: Runs `KFCU_ACES_StandardFields.sql` with the parameter `Pre-Funding`.
-- **Tuesday**: Additionally runs `KFCU_ACES_StandardFields.sql` with the parameter `Adverse` and `KFCU_ACES_HMDA.sql`.
-- **15th of the Month**: Runs `KFCU_ACES_StandardFields.sql` with the parameter `Post-Closing`.
+The script determines what to run based on the **first run marker file** and the current date:
+- **First run of the day, Monday–Friday**: Runs `KFCU_ACES_StandardFieldsV3.sql` with `Pre-Funding`. Creates `logs/morning_run_YYYYMMDD.flag` on success.
+- **First run of the day, Tuesday**: Additionally runs `Adverse` and `KFCU_ACES_HMDA.sql`.
+- **First run of the day, 15th of the month**: Additionally runs `Post-Closing`.
+- **Subsequent runs (marker file exists), Monday–Friday**: Runs `Pre-Funding` only.
+
+### Rerunning a Missed Day or Report
+
+**Rerun a specific date** (simulates that date's full morning schedule, including weekday and 15th logic):
+```powershell
+.\ACESExport.ps1 -Date 2026-05-15
+```
+
+**Rerun a specific report type** (bypasses all scheduling, runs only what you specify):
+```powershell
+.\ACESExport.ps1 -Type post-closing
+.\ACESExport.ps1 -Type pre-funding,adverse
+```
+
+Neither `--date` nor `--type` creates or updates the morning marker file, so the normal daily schedule is unaffected.
 
 ---
 
