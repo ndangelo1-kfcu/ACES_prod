@@ -4,6 +4,11 @@ from logger_config import logger
 from database import get_arcu_db
 import sys
 
+# Exit codes:
+#   0 = success
+#   1 = transient / unexpected error (retryable)
+#   2 = data/SQL error (non-retryable)
+
 
 def execute_sql_query(sql_query: str):
     try:
@@ -32,7 +37,12 @@ def execute_sql_query(sql_query: str):
                     pd.DataFrame()
                 )  # Return an empty DataFrame if no rows are returned
 
+    except pyodbc.DataError as e:
+        # DataError means a SQL type/conversion error - retrying will not help
+        logger.exception(f"An error occurred during sql query execution: {e}")
+        sys.exit(2)  # Non-retryable: data/SQL error
+        raise
     except Exception as e:
         logger.exception(f"An error occurred during sql query execution: {e}")
-        sys.exit(1)  # Exit the program if an error occurs
+        sys.exit(1)  # Retryable: unexpected/transient error
         raise

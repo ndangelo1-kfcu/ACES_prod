@@ -39,6 +39,10 @@ while ($retryCount -lt $maxRetries -and -not $success) {
     if ($process.ExitCode -eq 0) {
         Write-Output "Python script completed successfully"
         $success = $true
+    } elseif ($process.ExitCode -eq 2) {
+        # Exit code 2 = non-retryable data/SQL error; retrying will not help
+        Write-Output "Python script failed with a non-retryable data error (exit code 2). Aborting retries."
+        break
     } else {
         Write-Output "Python script failed with exit code $($process.ExitCode). Retrying ($($retryCount + 1)/$maxRetries)..."
         $retryCount++
