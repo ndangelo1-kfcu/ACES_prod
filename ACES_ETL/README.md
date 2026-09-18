@@ -171,6 +171,9 @@ The script determines what to run based on the **first run marker file** and the
 ```powershell
 .\ACESExport.ps1 -Date 2026-05-15
 ```
+**Example Job Step Command:**
+powershell.exe -File "C:\KFCU_SSIS\Live\ACES\ACES_ETL\ACESExport.ps1" -Date 2026-09-17
+^^^Notice the Parenthesis
 
 **Rerun a specific report type** (bypasses all scheduling, runs only what you specify):
 ```powershell
