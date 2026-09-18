@@ -561,19 +561,19 @@ DISTINCT
 	,pln.BALLOONFLAG 'BalloonPayment_ACES'
 	,pln.INTONLYFLAG 'IntOnlyPayments_ACES'
 	, CASE 
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = '1'  THEN '1 - Yes'
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'Y'  THEN '1 - Yes'
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = '2'  THEN '2 - No'
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'N'  THEN '2 - No'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = '1'  THEN '1-Yes'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'Y'  THEN '1-Yes'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = '2'  THEN '2-No'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'N'  THEN '2-No'
 		ELSE CAST(urla.NEG_AM_FLAG AS VARCHAR(50))
 		END as 'NegAmortization_ACES'
 	--,lploan.NEGAMORT
 	--,lploan.NEGAMORTFLG
 	, CASE 
-		WHEN CAST(terms.AMORTOTHDESC AS VARCHAR(50)) = '1' THEN '1 - Yes'
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'Y'   THEN '1 - Yes'
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = '2'   THEN '2 - No'
-		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'N'   THEN '2 - No'
+		WHEN CAST(terms.AMORTOTHDESC AS VARCHAR(50)) = '1' THEN '1-Yes'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'Y'   THEN '1-Yes'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = '2'   THEN '2-No'
+		WHEN CAST(urla.NEG_AM_FLAG AS VARCHAR(50)) = 'N'   THEN '2-No'
 		END as	'OtherNonAmortizingFeatures_ACES'
 	,l.[Occupancy Description] 'OccupancyType_ACES'
 	,CASE
